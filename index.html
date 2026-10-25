@@ -1,0 +1,84 @@
+
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101014">
+<title>VTS | Correo Temporal</title>
+<style>
+:root{color-scheme:dark;--bg:#101014;--panel:#1d1a22;--gold:#d4af37;--orange:#f97316;--text:#fff7ed;--muted:#c9bdca}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle at top,#35213c,#101014 65%);color:var(--text);font:16px/1.5 system-ui,sans-serif}
+main{max-width:650px;margin:auto;padding:22px 15px 40px}
+.brand{color:var(--gold);font-size:12px;letter-spacing:3px;font-weight:800}
+h1{font-size:36px;line-height:1.1;margin:12px 0}
+h1 span{color:var(--orange)}
+p,.muted{color:var(--muted)}
+.panel{background:var(--panel);border:1px solid #48394c;border-radius:18px;padding:17px;margin:16px 0}
+h2{font-size:18px;color:var(--gold);margin:0 0 10px}
+button{width:100%;padding:14px;border:0;border-radius:12px;margin:6px 0;background:linear-gradient(100deg,var(--orange),var(--gold));color:#17120b;font-weight:800;font-size:16px}
+button.secondary{background:#302735;color:white;border:1px solid #645168}
+button:disabled{opacity:.5}
+.address,.status{padding:12px;border:1px solid #594c5d;border-radius:10px;background:#111015;overflow-wrap:anywhere;white-space:pre-wrap}
+.address{color:#ffe3a0;margin:12px 0}
+.mail{border:1px solid #514452;padding:12px;border-radius:12px;margin:10px 0}
+.mail strong{display:block}
+.small{font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+<header>
+<div class="brand">VERBUM TECH SOLUTION</div>
+<h1>Correo <span>Temporal</span></h1>
+<p>Herramienta experimental para crear una dirección temporal y consultar mensajes.</p>
+<p class="small">PROTOTIPO · PENDIENTE DE VALIDACIÓN</p>
+</header>
+
+<section class="panel">
+<h2>1. Crear una dirección</h2>
+<p class="small">Pulsa el botón y espera la respuesta del servicio.</p>
+<button id="create">Solicitar dirección temporal</button>
+<div id="address" class="address">Todavía no hay dirección.</div>
+<button id="copy" class="secondary">Copiar dirección</button>
+</section>
+
+<section class="panel">
+<h2>2. Consultar mensajes</h2>
+<button id="refresh">Actualizar bandeja</button>
+<div id="messages" class="small">Los mensajes aparecerán aquí si la conexión funciona.</div>
+</section>
+
+<section class="panel">
+<h2>3. Envío de correos</h2>
+<p>El envío no está implementado. La información de API que tenemos no documenta una función para enviar mensajes. No se ha confirmado que el proveedor lo permita.</p>
+</section>
+
+<section class="panel">
+<h2>Estado de conexión</h2>
+<div id="status" class="status">Preparado. Pulsa «Solicitar dirección temporal» cuando la aplicación esté publicada en Netlify.</div>
+<p class="small">No utilices este servicio para contraseñas importantes, información confidencial ni cuentas críticas. El correo temporal no garantiza anonimato.</p>
+</section>
+<p class="small" style="text-align:center">VTS · Versión experimental</p>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+let email="";
+function status(t){$("status").textContent=t}
+$("create").onclick=()=>{
+ status("La interfaz funciona, pero falta conectar la función de servidor en Netlify. Todavía no se ha solicitado una dirección real.");
+};
+$("refresh").onclick=()=>{
+ status("La consulta real de mensajes aún no está conectada. Primero hay que publicar y configurar la función de servidor.");
+};
+$("copy").onclick=async()=>{
+ if(!email){status("Todavía no existe una dirección para copiar.");return}
+ try{await navigator.clipboard.writeText(email);status("Dirección copiada.")}
+ catch(e){status("Mantén pulsada la dirección para copiarla.")}
+};
+</script>
+</body>
+  </html>
+  
