@@ -52,12 +52,12 @@ button:disabled{opacity:.5}
 
 <section class="panel">
 <h2>3. Envío de correos</h2>
-<p>El envío no está implementado. La información de API que tenemos no documenta una función para enviar mensajes. No se ha confirmado que el proveedor lo permita.</p>
+<p>El envío no está implementado. No se ha confirmado que el proveedor lo permita.</p>
 </section>
 
 <section class="panel">
 <h2>Estado de conexión</h2>
-<div id="status" class="status">Preparado. Pulsa «Solicitar dirección temporal» cuando la aplicación esté publicada en Netlify.</div>
+<div id="status" class="status" role="status" aria-live="polite">Preparado. Aún no se ha contactado con el proveedor.</div>
 <p class="small">No utilices este servicio para contraseñas importantes, información confidencial ni cuentas críticas. El correo temporal no garantiza anonimato.</p>
 </section>
 <p class="small" style="text-align:center">VTS · Versión experimental</p>
@@ -65,20 +65,92 @@ button:disabled{opacity:.5}
 
 <script>
 const $=id=>document.getElementById(id);
+const endpoint="/.netlify/functions/mail";
 let email="";
+let sidToken="";
+let sid="";
+let busy=false;
+
 function status(t){$("status").textContent=t}
-$("create").onclick=()=>{
- status("La interfaz funciona, pero falta conectar la función de servidor en Netlify. Todavía no se ha solicitado una dirección real.");
+function lock(v){
+  busy=v;
+  $("create").disabled=v;
+  $("refresh").disabled=v;
+}
+async function callApi(action,params={}){
+  const response=await fetch(endpoint,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({action,params:{...params,sid_token:sidToken,sid}})
+  });
+  const raw=await response.text();
+  let result;
+  try{result=JSON.parse(raw)}catch{throw Error("Netlify devolvió una respuesta que no es JSON (HTTP "+response.status+").")}
+  if(!response.ok)throw Error(result.error||("Error HTTP "+response.status));
+  if(result.error)throw Error(result.error);
+  return result.data;
+}
+function findAddress(data){
+  return data?.email_addr||data?.email||data?.address||"";
+}
+function saveSession(data){
+  if(data?.sid_token)sidToken=String(data.sid_token);
+  if(data?.sid)sid=String(data.sid);
+}
+$("create").onclick=async()=>{
+  if(busy)return;
+  lock(true);
+  status("Solicitando una dirección al proveedor…");
+  try{
+    const data=await callApi("get_email_address");
+    saveSession(data);
+    const found=findAddress(data);
+    if(!found)throw Error("El proveedor respondió, pero no devolvió una dirección reconocible. Revisa la respuesta de la función.");
+    email=found;
+    $("address").textContent=email;
+    status("Dirección recibida del proveedor. La sesión debe comprobarse con una consulta de mensajes.");
+  }catch(e){
+    status("No se pudo crear la dirección: "+e.message);
+  }finally{lock(false)}
 };
-$("refresh").onclick=()=>{
- status("La consulta real de mensajes aún no está conectada. Primero hay que publicar y configurar la función de servidor.");
+$("refresh").onclick=async()=>{
+  if(busy)return;
+  if(!email){status("Primero solicita una dirección temporal.");return}
+  lock(true);
+  status("Consultando la bandeja…");
+  try{
+    const data=await callApi("get_email_list");
+    saveSession(data);
+    const list=Array.isArray(data)?data:(data?.list||data?.emails||data?.email_list||[]);
+    $("messages").replaceChildren();
+    if(!Array.isArray(list)||list.length===0){
+      $("messages").textContent="Consulta completada, pero no se encontraron mensajes en la respuesta.";
+    }else{
+      for(const item of list){
+        const card=document.createElement("div");
+        card.className="mail";
+        const subject=document.createElement("strong");
+        subject.textContent=item.mail_subject||item.subject||"(Sin asunto)";
+        const sender=document.createElement("div");
+        sender.textContent="De: "+(item.mail_from||item.from||"No indicado");
+        const date=document.createElement("div");
+        date.className="small";
+        date.textContent=item.mail_date||item.date||"";
+        card.append(subject,sender,date);
+        $("messages").append(card);
+      }
+    }
+    status("Respuesta recibida de la consulta de bandeja. Hay que validar que el formato y la sesión sean correctos.");
+  }catch(e){
+    status("No se pudo consultar la bandeja: "+e.message);
+  }finally{lock(false)}
 };
 $("copy").onclick=async()=>{
- if(!email){status("Todavía no existe una dirección para copiar.");return}
- try{await navigator.clipboard.writeText(email);status("Dirección copiada.")}
- catch(e){status("Mantén pulsada la dirección para copiarla.")}
+  if(!email){status("Todavía no existe una dirección para copiar.");return}
+  try{await navigator.clipboard.writeText(email);status("Dirección copiada.")}
+  catch(e){status("No se pudo copiar automáticamente. Mantén pulsada la dirección para copiarla.")}
 };
 </script>
 </body>
-  </html>
-  
+ </html>
+ 
